@@ -1,0 +1,303 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Game Engine / Polar Poop</title>
+<script type="text/javascript" src="map.js"></script>
+<script type="text/javascript" src="nyawa.js"></script>
+<script type="text/javascript" src="dog.js"></script>
+<script type="text/javascript" src="player.js"></script>
+<script type="text/javascript" src="bear.js"></script>
+<script type="text/javascript" src="film.js"></script>
+<script type="text/javascript" src="a_star.js"></script>
+<script type="text/javascript" src="shit.js"></script>
+</head>
+    <style>
+      body {
+        margin: 0px;
+        padding: 0px;
+      }
+      #myCanvas {
+        border: 1px solid #9C9898;
+      }
+    </style>
+<body>
+  <canvas id="myCanvas" width="1320" height="640"></canvas>
+  <script>
+    var canvas = document.getElementById('myCanvas');
+    var context = canvas.getContext('2d');
+    var tileSheet = new Image();
+    tileSheet.addEventListener('load', eventSheetLoaded , false);
+    tileSheet.src = "Sprite.png";
+    var sheetBear = new Image();
+    sheetBear.src = "bearwhite.png";
+    var begin=new Image();
+    begin.src = "begin.jpg";
+    var play=new Image(); //120 40
+    play.src = "play.jpg";
+    var restart=new Image();
+    restart.src = "restart.jpg";
+
+    var map = new Map(tileSheet,1);
+    var dog = new Dog(tileSheet,3,3);    
+    var bear = new Bear(sheetBear,28,14);
+    var player = new Player(tileSheet,map.tileMap,0,3)
+    var nyawa = new Nyawa(tileSheet);
+    var shit = new Shit(tileSheet,5,map.tileMap);
+    map.createGraph();
+    var seru = new Image();
+    seru.src = "seru.png";
+    canvas.addEventListener("mousedown", getPosition, false);
+
+    function getPosition(event)
+    {
+      var x = event.x;
+      var y = event.y;
+
+      x -= canvas.offsetLeft;
+      y -= canvas.offsetTop;
+      if(x>540&&x<780 || y>280&&y<320){
+          beginGame=true;
+          if(stop==true) restart();
+      }
+        
+    }
+    
+    
+    window.addEventListener('keydown', doKeyDown, true);
+    function doKeyDown(e){
+      if (e.keyCode == 87) {             //atas
+          player.accelY=-1;
+          player.accelX=0;
+      }else if (e.keyCode == 83) {        //bawah
+          player.accelY=1;
+          player.accelX=0;
+      }else if (e.keyCode == 65) {        //kiri
+          player.accelY=0;
+          player.accelX=-1;
+      }else if (e.keyCode == 68) {        //kanan
+          player.accelY=0;
+          player.accelX=1;
+      }      
+      if(e.keyCode == 32){
+          if(playFilm==true){
+            playFilm=false;
+            player.x=1;
+            dog.x=4;
+            dog.y=3;
+            map.tileMap[3][0]=72;
+            map.tileMap[2][0]=72;
+            map.tileMap[4][0]=72;  
+          }          
+      }
+    }
+
+var listNode=[0,38,228,271];
+var paths=new Array(listNode.length);
+var f_scores=new Array(listNode.length);
+    
+
+    function flee(){
+      for(var i=0;i<listNode.length;i++){
+        paths[i]=new Array();
+        a_star(map.graphPos [player.y][player.x],listNode[i]);
+        f_scores[i]=Math.sqrt(Math.pow(Math.abs(player.x*32-map.node[listNode[i]].x*32),2) + Math.pow(Math.abs(player.y*32-map.node[listNode[i]].y*32),2));
+        paths[i]=path;
+        //console.log(player.x + " " +player.y);
+        //console.log(map.node[listNode[i ]].x + " " +map.node[listNode[i]].y);  
+      }
+           
+      var index;
+      var ta=0;
+      for(var i=0;i<f_scores.length;i++){        
+          if(f_scores[i]>ta){
+            index=i;
+            ta=f_scores[i];
+          }         
+        
+      }
+      //console.log(index);
+      a_star(map.graphPos[dog.y][dog.x],listNode[index]);
+      
+    }
+
+var listNode_bear=[0,38,228,271];
+var paths_bear=new Array(listNode_bear.length);
+var f_scores_bear=new Array(listNode_bear.length);
+    
+
+    function chaseBear(){
+      for(var i=0;i<listNode_bear.length;i++){
+        paths_bear[i]=new Array();
+        a_star_bear(map.graphPos [player.y][player.x],listNode_bear[i]);
+        f_scores_bear[i]=Math.sqrt(Math.pow(Math.abs(player.x*32-map.node[listNode_bear[i]].x*32),2) + Math.pow(Math.abs(player.y*32-map.node[listNode_bear[i]].y*32),2));
+        paths_bear[i]=path;
+        //console.log(player.x + " " +player.y);
+        //console.log(map.node[listNode_bear[i ]].x + " " +map.node[listNode_bear[i]].y);  
+      }
+           
+      var index;
+      var ta=0;
+      for(var i=0;i<f_scores_bear.length;i++){        
+          if(f_scores_bear[i]>ta){
+            index=i;
+            ta=f_scores_bear[i];
+          }         
+        
+      }
+      //console.log(index);
+      a_star_bear(map.graphPos[dog.y][dog.x],listNode_bear[index]);
+      
+    }
+
+
+
+    function bearRandom(){
+        while(true){
+          var rand=Math.floor(Math.random()*4);
+         // alert(rand);
+          var tampX=bear.x,tampY=bear.y;
+          switch(rand){
+            case 0 : bear.y+=1; break;
+            case 1 : bear.y+=-1; break;
+            case 2 : bear.x+=1; break;
+            case 3 : bear.x+=-1; break;
+          }
+          if(map.tileMap[bear.y][bear.x]==70) break;
+          bear.x=tampX,bear.y=tampY;
+        }         
+    }
+
+    function bearTeritory(){
+
+    }
+    var a=540;
+    function gotcha(){
+          context.drawImage(tileSheet, Math.floor(8 % 10) *50, Math.floor(8 / 10) *50,50,50,a+0*40,240,40,40);
+    context.drawImage(tileSheet, Math.floor(9 % 10) *50, Math.floor(9 / 10) *50,50,50,a+1*40,240,40,40);
+    context.drawImage(tileSheet, Math.floor(18 % 10) *50, Math.floor(18 / 10) *50,50,50,a+2*40,240,40,40);
+    context.drawImage(tileSheet, Math.floor(19 % 10) *50, Math.floor(19 / 10) *50,50,50,a+3*40,240,40,40);
+    context.drawImage(tileSheet, Math.floor(56 % 10) *50, Math.floor(56 / 10) *50,50,50,a+4*40,240,40,40);
+    context.drawImage(tileSheet, Math.floor(64 % 10) *50, Math.floor(64 / 10) *50,50,50,a+5*40,240,40,40);
+    
+      stop=true;;
+    }
+
+    var restartBool=false;
+    function restartGame(){
+      map = new Map(tileSheet,1);
+      dog = new Dog(tileSheet,3,3);    
+      bear = new Bear(sheetBear,28,14);
+      player = new Player(tileSheet,map.tileMap,0,3)
+      nyawa = new Nyawa(tileSheet);
+      shit = new Shit(tileSheet,5,map.tileMap);
+      tic=0;
+      counter=0;
+      playFilm=true;
+      gotchaBool=true;
+      flee();
+      
+      beginGame=false; 
+      restartBool=false;     
+      stop=false;
+      nyawa.poin=3;
+      player.nyawa=3;
+    }
+
+    function drawAll(){
+      map.draw(context);
+      shit.draw(context);
+      dog.draw(context);
+      player.draw(context);
+      bear.draw(context);
+      nyawa.draw(context);
+      if(stop) context.drawImage(restart, 0, 0,120,40,540, 280,240,80);
+      if(gotchaBool==true) gotcha();
+      if(tic>20 && tic < 30) context.drawImage(seru,0,0,225,225,player.x*40+25,player.y*40-10,15,15);
+    }
+
+    var tic=0;
+    var counter=0;
+    var playFilm=true;
+    var gotchaBool=false;
+    flee();
+    beginGame=false;
+    var stop=false;
+    function game(){
+      if(player.x==dog.x && player.y==dog.y){
+        gotchaBool=true;
+        gotcha();
+        //alert("aso");
+      }
+      if(beginGame==false){
+        context.drawImage(begin, 0, 0,1320,640,0, 0,1320,640);
+        context.drawImage(play, 0, 0,120,40,540, 280,240,80);
+      }else{
+        
+        if(playFilm==true){ 
+        
+          film();
+        }
+        else{
+        //map.tileMap[map.node[a].x][map.node[a].y]= 28;       
+
+          if(player.nyawa &&stop==false){
+            if(bear.check(player.x,player.y)){
+
+            }
+            player.move(shit,player);  
+            if(tic%10==0){
+              //alert("a");
+              flee();  
+              counter=0;
+            }
+
+            if(counter<path.length){
+              dog.x=map.node[path[counter]].x;
+              dog.y=map.node[path[counter]].y;
+            }          
+            counter++;    
+
+            if(tic%10==0)
+            bearRandom();
+
+            if(tic%30==0){
+              var rand=Math.floor(Math.random()*3);
+              shit.add(dog.x,dog.y,rand,6);
+            }
+            if(tic%100==0){
+              shit.vapor();
+            }
+
+            if(bear.x==player.x && bear.y==player.y)
+            {
+              stop=true;
+              player.nyawa=0;
+            }
+
+            nyawa.poin = player.nyawa;
+
+              //console.log(player.nyawa);
+            if(player.nyawa<=0)
+            stop=true;
+          }      
+      }            
+      drawAll();
+      //if(map.til)
+      tic++;//console.log(tic);  
+      }
+      
+    }
+
+    function eventSheetLoaded() {
+      setInterval(game, 100 );
+    }
+    
+
+
+
+    
+  </script>
+  <textarea id="log"></textarea>
+  <textarea id="log1"></textarea>
+</body>
+</html>
